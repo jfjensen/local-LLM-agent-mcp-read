@@ -2,8 +2,9 @@
 Stage 2: Final agent — search plus the browser reader tools
 =============================================================
 Same multi-server agent as Part 4, but the browser MCP server now
-exposes two tools (`fetch` and `extract`). The system prompt is updated
-to teach the model when to prefer each.
+exposes five reader tools (fetch_snippet, fetch_urls, fetch_structure,
+extract, summarize). The system prompt teaches the model when to prefer
+each.
 
 Prerequisites:
   - SearXNG running locally
@@ -43,14 +44,26 @@ SYSTEM_PROMPT = """You are an assistant with access to two MCP servers:
   - search-server provides `search-server_search(query, max_results)`: a
     web search via a local SearXNG instance. Returns URLs with titles
     and snippets.
-  - browser-server provides TWO tools:
-      * `browser-server_fetch(url)`: opens a URL in a real browser and
-        returns the page's accessibility-tree snapshot (the page
-        contents in LLM-friendly form).
-      * `browser-server_extract(url, schema)`: opens a URL, fetches the
-        page, and populates the JSON Schema you provide using structured
-        extraction. Returns clean JSON. Supports arrays, nested objects,
-        and any schema shape JSON allows.
+  - browser-server provides FIVE reader tools. None of them returns the
+    raw page snapshot; each returns a small, purposeful slice:
+      * `browser-server_fetch_snippet(url)`: the head of the page, for a
+        quick look. If the page is longer, the result ends with a marker
+        telling you to use `summarize` or `extract` for the rest.
+      * `browser-server_fetch_urls(url)`: the page's links as a JSON
+        array of {text, url} objects, deduplicated, with absolute URLs.
+        Use this to find which link to follow next.
+      * `browser-server_fetch_structure(url)`: the page's heading
+        outline, indented by level. Use this to see how a page is
+        organized. Some pages (short stubs, infobox-heavy pages) have a
+        thin outline; in that case prefer `summarize` or `extract`.
+      * `browser-server_extract(url, schema)`: opens the URL and
+        populates the JSON Schema you provide using structured extraction
+        across the whole page (chunked, then merged). Returns clean JSON.
+        Supports arrays, nested objects, and any schema shape JSON allows.
+      * `browser-server_summarize(url, question="")`: a concise prose
+        summary of the whole page, built by combining per-chunk
+        summaries. Pass `question` to focus the summary on a specific
+        question rather than producing a general overview.
 
 CRITICAL RULES:
 
@@ -59,14 +72,14 @@ CRITICAL RULES:
      calling it is wrong.
 
   2. When you receive search results, your next action MUST be a
-     `fetch` or `extract` call on the most promising URL. Do not stop
-     after a search. Do not summarize the snippets and call it done.
+     browser-server call on the most promising URL. Do not stop after a
+     search. Do not summarize the snippets and call it done.
 
   3. When the user gives you a fresh question that requires looking
      something up, the very first action is `search-server_search`.
 
-  4. After the fetch/extract returns, THEN answer the user's question
-     from the returned content. Cite the URL you used.
+  4. After the browser-server tool returns, THEN answer the user's
+     question from the returned content. Cite the URL you used.
 
 When to use which browser tool:
 
@@ -74,9 +87,17 @@ When to use which browser tool:
     enumerate in advance (registrar, price, author, publication date,
     list of nameservers, etc.). Provide a JSON Schema with property
     descriptions that match how those fields would appear on the page.
-  - Use `fetch` when the user asks an open-ended question, wants a
-    free-form summary, or you cannot predict the field shape ahead of
-    time.
+  - Use `summarize` when the user wants a free-form summary of a page,
+    or an answer to an open question about a long page that does not map
+    to named fields. Pass `question` to focus the summary.
+  - Use `fetch_snippet` when you only need a quick look at a page (to
+    confirm a URL is what you expect, or to see what kind of page it
+    is). If the snippet ends with a "more" marker and the user's
+    question is not yet answered, chain to `summarize` or `extract`.
+  - Use `fetch_urls` when you need to navigate from a page: to find the
+    right link to follow, or to see what a page links out to.
+  - Use `fetch_structure` when you want the page's outline before
+    deciding what to read in full.
 
 For purely timeless questions (math, definitions, syntax, well-established
 historical facts), answer directly without using any tool.

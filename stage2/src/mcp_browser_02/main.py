@@ -1,14 +1,20 @@
 """
 Stage 2: Browser MCP server (snippet, urls, structure, extract, summarize)
-=======================================================
-Adds a second tool, `extract`, that uses camofox's POST /tabs/{tabId}/extract
-endpoint. The model passes a JSON Schema describing the fields it wants,
-camofox runs the extraction server-side, and the model gets back
-structured JSON instead of an unstructured snapshot.
+==========================================================================
+Five reader tools over the camofox-browser accessibility snapshot. None
+of them returns the raw snapshot to the agent; each returns a small,
+purposeful slice, and the work of producing it happens inside the server.
 
-This is faster, cheaper, and more reliable than asking the model to
-extract fields from a raw snapshot — the work happens once on the
-server, not in the model's head.
+  - fetch_snippet : the head of the page, for a quick look
+  - fetch_urls    : the page's links as {text, url} pairs
+  - fetch_structure: the page's heading outline
+  - extract       : named fields as JSON, via chunk-and-merge over the
+                    whole page (no truncation), with an array cleanup pass
+  - summarize     : a prose summary, combining per-chunk summaries
+                    (map-reduce by default, or refine)
+
+Large pages are chunked rather than truncated, so content in the middle
+of a page (a Wikipedia infobox, say) is read instead of dropped.
 
 Prerequisites:
   - camofox-browser running locally (see ../stage1/)
@@ -18,7 +24,7 @@ Run with:
 
 Probe with:
     python ../inspect_any.py mcp_browser_02.main
-    python ../inspect_any.py mcp_browser_02.main fetch --kv url=https://example.com
+    python ../inspect_any.py mcp_browser_02.main fetch_snippet --kv url=https://example.com
 """
 
 import json
