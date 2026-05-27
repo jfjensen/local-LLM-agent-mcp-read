@@ -24,8 +24,8 @@ outline for the lightweight reader tools.
 ## Install
 
 ```bash
-git clone https://github.com/jfjensen/local-LLM-agent-mcp-browser.git
-cd local-LLM-agent-mcp-browser
+git clone https://github.com/jfjensen/local-LLM-agent-mcp-read.git
+cd local-LLM-agent-mcp-read
 python -m venv .venv
 # Linux / macOS:
 source .venv/bin/activate
