@@ -1,0 +1,30 @@
+services:
+  camofox:
+    image: camofox-browser:latest
+    container_name: camofox
+    ports:
+      - "9500:9500"
+    environment:
+      - NODE_ENV=production
+      - CAMOFOX_PORT=9500
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9500/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng-mcp
+    ports:
+      - "8090:8080"
+    volumes:
+      # Bind-mount our pre-configured settings so JSON API is on from
+      # the first run. Without this, you have to start once, edit the
+      # generated settings.yml, then restart.
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8090/
+    restart: unless-stopped

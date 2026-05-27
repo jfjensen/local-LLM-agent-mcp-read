@@ -1,0 +1,116 @@
+# Configuration for the local LLM agent (Part 5).
+#
+# Every stage of this project reads its settings from here. So this
+# is the one file you need to edit to:
+#   - swap the model;
+#   - point at a SearXNG or camofox instance on a non-default port;
+#   - tune the snapshot truncation budget or the page-settle delay.
+#
+# The config is loaded from the current working directory. So you can
+# also drop a customized `config.toml` next to your `history/` folder
+# and the stages will pick it up automatically.
+
+[model]
+# The Ollama model to use. Must support tool calling. The default is
+# qwen3.5:9b. Other reliable options: qwen2.5:7b-instruct,
+# hermes3:8b, llama3.1:8b-instruct.
+name = "qwen3.5:9b"
+
+# Sampling temperature. Tool calling wants near-zero. 0.1 is the sweet
+# spot in practice; structured enough for clean JSON, not so flat the
+# model gets stuck.
+temperature = 0.1
+
+# Some Qwen 3 and 3.5 builds call tools more reliably with thinking
+# off. Set to true to re-enable.
+thinking = false
+
+[searxng]
+# Used by the SearXNG MCP server (`mcp-search-part3`). Override here
+# if you mapped SearXNG to a different port.
+url = "http://localhost:8090"
+
+[camofox]
+# Used by the browser MCP server (stages 2 through 5). Override here
+# if you mapped camofox-browser to a different port.
+url = "http://localhost:9500"
+
+[browser]
+# Max chars of the accessibility snapshot to return to the model.
+# Snapshots from busy pages can run to 80k chars, which blows up the
+# context window quickly. 8000 chars (~2000 tokens) is the working
+# default. If you bump this, also consider bumping the model's
+# context window via Ollama options.
+max_snapshot_chars = 30000
+
+# Seconds to wait after navigation before snapshotting, so JS-heavy
+# pages have time to render. 1.5s is the working default. Static
+# pages don't need this much; SPAs may need more.
+settle_seconds = 1.5
+
+[chunking]
+# When a snapshot is larger than a single model call can handle well,
+# the extract and summarize tools split it into overlapping chunks,
+# process each chunk, then combine the results. This avoids the
+# middle-dropping truncation, which silently discards body content
+# like infobox tables.
+#
+# chunk_chars is the target size of each chunk. A snapshot smaller
+# than this is processed in one pass (no chunking). overlap_lines is
+# how many trailing lines of one chunk are repeated at the start of
+# the next, so a fact on a chunk boundary is not lost by both sides.
+chunk_chars = 6000
+overlap_lines = 3
+
+# summarize builds its result by refining a running summary chunk by
+# chunk. This is sequential (one model call per chunk, in order) but
+# faithful: each step produces an updated whole-page summary, so detail
+# from the middle of a long page is preserved instead of truncated away.
+
+[reading]
+# Settings for the lightweight reader tools that return a small slice of
+# a page rather than the whole snapshot.
+#
+# snippet_chars is the size of the head slice returned by fetch_snippet.
+# It is the quick-look tool, so this is deliberately small; if the page
+# is longer, fetch_snippet appends a marker pointing at summarize and
+# extract for the full content.
+snippet_chars = 4000
+
+# max_link_label_chars caps the length of each link label returned by
+# fetch_urls, so one giant link (a fundraising banner rendered as a
+# link, say) cannot bloat the result. Longer labels are truncated.
+max_link_label_chars = 100
+
+# How summarize combines per-chunk work on a multi-chunk page:
+#   "mapreduce" - summarize each chunk independently (map), then combine
+#                 the partials with a dedicated reduce step that discards
+#                 page chrome. Robust to junk chunks and parallelizable;
+#                 reads a little more like stitched-together facts.
+#   "refine"    - carry a running summary forward, folding each chunk into
+#                 it. More coherent, but sequential and slower on large
+#                 pages; a guard prevents a junk tail chunk from erasing
+#                 the running summary.
+summarize_strategy = "mapreduce"
+
+[agent]
+# Where the agent stages persist their conversation history.
+history_dir = "history"
+
+# Per-tool-result truncation budget. Tool results longer than this
+# get the first-N-and-last-N treatment, with a marker in the middle.
+# This is separate from snapshot truncation: it applies to any tool
+# output (search results, error messages, etc.), and is the safety
+# net that keeps a single oversized tool result from blowing the
+# context.
+max_tool_result_chars = 30000
+
+[logging]
+# Log level for all stages. Set to "DEBUG" to see what's happening
+# inside the tool-call loop: which messages the model returns, which
+# tools get chained, whether the nudge fires. "INFO" prints just the
+# high-level lifecycle (server connections, tool counts). "WARNING"
+# is the quietest useful setting.
+#
+# Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL.
+level = "DEBUG"

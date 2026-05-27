@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Project Specifics
+# Ignore chat histories but keep the directory (if you want)
+history/
+
+# Build artifacts (from your pip install .)
+build/
+dist/
+*.egg-info/
+
+# Local configuration/OS files
+.DS_Store
+.env
+
+# Claude AI
+.claude

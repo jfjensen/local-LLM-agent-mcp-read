@@ -1,0 +1,39 @@
+[project]
+name = "local-LLM-agent-mcp-browser"
+version = "0.1.0"
+description = "A local LLM agent that browses the web via a camofox-browser MCP server. Part 5 of the Build Your Own Claude Code series."
+requires-python = ">=3.12"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Jes Fink-Jensen", email = "jes@finkjensen.be" }
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "ollama>=0.4.0",
+    "httpx>=0.27.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/mcp_browser_config",
+    "stage2/src/mcp_browser_02",
+    "stage2/src/mcp_search_part3",
+    "stage2/src/mcp_agent_02",
+]
+
+[project.scripts]
+# Show the active config (for debugging):
+mcp-config-show    = "mcp_browser_config:show"
+
+# Stage 1 has no Python; it's just docker-compose. See stage1/README.md
+# Stage 2 is the full agent and browser server.
+mcp-browser-stage2 = "mcp_browser_02.main:chat"
+mcp-agent-stage2   = "mcp_agent_02.main:chat"
+
+# Copy of Part 3's SearXNG MCP server, used by the Stage 2 agent.
+mcp-search-part3   = "mcp_search_part3.main:chat"

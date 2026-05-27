@@ -1,0 +1,26 @@
+# Minimal SearXNG settings, bind-mounted into the container.
+# Everything not set here inherits SearXNG's defaults.
+# See: https://docs.searxng.org/admin/settings/index.html
+
+use_default_settings: true
+
+general:
+  instance_name: "SearXNG (Part 4 local)"
+
+search:
+  # We need both. The default ships only html, which makes the API
+  # return 403 to JSON-requesting clients (including our MCP server).
+  formats:
+    - html
+    - json
+  safe_search: 0
+  autocomplete: ""
+
+server:
+  # The limiter blocks repeated requests from the same client, which
+  # is exactly what an LLM does. So it must be off for our use case.
+  limiter: false
+
+  # Generate your own with: openssl rand -hex 32
+  # Required by SearXNG even on a private instance.
+  secret_key: "change-me-for-anything-public-facing-this-is-only-local"
