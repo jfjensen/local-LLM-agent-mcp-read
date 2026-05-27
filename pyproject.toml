@@ -1,7 +1,7 @@
 [project]
-name = "local-LLM-agent-mcp-browser"
+name = "local-LLM-agent-mcp-read"
 version = "0.1.0"
-description = "A local LLM agent that browses the web via a camofox-browser MCP server. Part 5 of the Build Your Own Claude Code series."
+description = "A local LLM agent that reads whole web pages without truncation, via chunked extraction, summarization, and lightweight reader tools over a camofox-browser MCP server. Part 5 of the Build Your Own Claude Code series."
 requires-python = ">=3.12"
 readme = "README.md"
 license = "MIT"
